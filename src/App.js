@@ -32,7 +32,6 @@ const FORMATIONS = {
 
 const createEmptyPlayer = () => ({
   name: '',
-  number: '',
   photo: ''
 });
 
@@ -49,6 +48,24 @@ const buildInitialPlayers = () => {
 };
 
 const formatFormationLabel = (formationKey) => formationKey.split('-').join(' – ');
+
+const projectPlayerPosition = (slot) => {
+  const depth = slot.y / 100;
+  const widthScale = 0.55 + depth * 0.45;
+  const left = 50 + (slot.x - 50) * widthScale;
+  const curve = Math.pow(depth, 1.35);
+  const top = 8 + curve * 82;
+  const scale = 0.62 + depth * 0.45;
+  const shadow = 0.18 + depth * 0.35;
+
+  return {
+    left: `${left}%`,
+    top: `${top}%`,
+    '--player-scale': scale,
+    '--player-shadow': shadow,
+    zIndex: Math.round(depth * 100) + 5
+  };
+};
 
 const FormationSelector = ({ formationKey, onSelect }) => (
   <div className="formation-selector" role="tablist" aria-label="Formation selector">
@@ -70,24 +87,28 @@ const FormationSelector = ({ formationKey, onSelect }) => (
   </div>
 );
 
-const PlayerMarker = ({ slot, player, index }) => (
-  <div className="player-marker" style={{ left: `${slot.x}%`, top: `${slot.y}%` }}>
-    <div className="player-card">
-      <div className="player-photo">
-        {player.photo ? (
-          <img src={player.photo} alt={player.name || slot.position} />
-        ) : (
-          <span>{player.number || slot.position}</span>
-        )}
-      </div>
-      <div className="player-number" aria-hidden="true">{player.number || index + 1}</div>
-      <div className="player-banner">
-        <span className="player-name">{player.name || `Player ${index + 1}`}</span>
-        <span className="player-role">{slot.label}</span>
+const PlayerMarker = ({ slot, player, index }) => {
+  const projectedStyle = projectPlayerPosition(slot);
+  const displayName = player.name || `Player ${index + 1}`;
+
+  return (
+    <div className="player-marker" style={projectedStyle}>
+      <div className="player-card">
+        <div className="player-photo">
+          {player.photo ? (
+            <img src={player.photo} alt={player.name || slot.position} />
+          ) : (
+            <span>{slot.position}</span>
+          )}
+        </div>
+        <div className="player-banner">
+          <span className="player-name">{displayName}</span>
+          <span className="player-role">{slot.label}</span>
+        </div>
       </div>
     </div>
-  </div>
-);
+    );
+};
 
 const TeamBanner = ({ teamName }) => (
   <div className="team-banner" aria-live="polite">
@@ -106,30 +127,73 @@ const Pitch = ({ teamName, formationPlayers }) => (
     <div className="stadium-crowd" aria-hidden="true" />
 
     <div className="pitch" role="img" aria-label="Field hockey pitch with lineup">
-      <svg className="pitch-markings" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet">
-        <rect x="8" y="8" width="384" height="184" rx="12" ry="12" fill="none" stroke="white" strokeWidth="3" />
-        <line x1="200" y1="8" x2="200" y2="192" stroke="white" strokeWidth="2.4" />
-        <line x1="96" y1="8" x2="96" y2="192" stroke="white" strokeWidth="1.6" strokeDasharray="10 8" />
-        <line x1="304" y1="8" x2="304" y2="192" stroke="white" strokeWidth="1.6" strokeDasharray="10 8" />
+       <div className="pitch-surface">
+        <svg className="pitch-markings" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">
+          <rect x="12" y="12" width="376" height="216" rx="8" ry="8" fill="none" stroke="white" strokeWidth="3" />
+          <line x1="12" y1="120" x2="388" y2="120" stroke="white" strokeWidth="2.2" />
+          <line x1="12" y1="66.5" x2="388" y2="66.5" stroke="white" strokeWidth="1.8" />
+          <line x1="12" y1="173.5" x2="388" y2="173.5" stroke="white" strokeWidth="1.8" />
 
-        <rect x="2" y="78" width="12" height="44" fill="rgba(255,255,255,0.15)" stroke="white" strokeWidth="3" />
-        <rect x="386" y="78" width="12" height="44" fill="rgba(255,255,255,0.15)" stroke="white" strokeWidth="3" />
+          <path
+            d="M 104 12 L 104 47 A 100 100 0 0 0 296 47 L 296 12"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.4"
+          />
+          <path
+            d="M 90 12 L 90 56 A 114 114 0 0 0 310 56 L 310 12"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeDasharray="6 8"
+          />
+          <path
+            d="M 104 228 L 104 193 A 100 100 0 0 1 296 193 L 296 228"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.4"
+          />
+          <path
+            d="M 90 228 L 90 184 A 114 114 0 0 1 310 184 L 310 228"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeDasharray="6 8"
+          />
 
-        <path d="M 20 78 A 44 44 0 0 1 20 122" fill="none" stroke="white" strokeWidth="2.4" />
-        <path d="M 380 78 A 44 44 0 0 0 380 122" fill="none" stroke="white" strokeWidth="2.4" />
+          <circle cx="200" cy="120" r="12" fill="none" stroke="white" strokeWidth="1.8" />
+          <circle cx="200" cy="32" r="3.8" fill="white" />
+          <circle cx="200" cy="208" r="3.8" fill="white" />
 
-        <line x1="64" y1="78" x2="20" y2="78" stroke="white" strokeWidth="2" />
-        <line x1="64" y1="122" x2="20" y2="122" stroke="white" strokeWidth="2" />
-        <line x1="380" y1="78" x2="336" y2="78" stroke="white" strokeWidth="2" />
-        <line x1="380" y1="122" x2="336" y2="122" stroke="white" strokeWidth="2" />
+          <circle cx="200" cy="120" r="1.8" fill="white" />
+        </svg>
+      </div> 
 
-        <circle cx="40" cy="100" r="3.5" fill="white" />
-        <circle cx="360" cy="100" r="3.5" fill="white" />
-      </svg>
+         <div className="pitch-goal pitch-goal-home" aria-hidden="true">
+        <div className="goal-frame">
+          <div className="goal-post left" />
+          <div className="goal-crossbar" />
+          <div className="goal-post right" />
+          <div className="goal-backboard" />
+        </div>
+        <div className="goal-net" />
+      </div>
 
-      {formationPlayers.map(({ slot, player }, index) => (
-        <PlayerMarker key={slot.id} slot={slot} player={player} index={index} />
-      ))}
+         <div className="pitch-goal pitch-goal-away" aria-hidden="true">
+        <div className="goal-frame">
+          <div className="goal-post left" />
+          <div className="goal-crossbar" />
+          <div className="goal-post right" />
+          <div className="goal-backboard" />
+        </div>
+        <div className="goal-net" />
+      </div>
+
+       <div className="players-layer">
+        {formationPlayers.map(({ slot, player }, index) => (
+          <PlayerMarker key={slot.id} slot={slot} player={player} index={index} />
+        ))}
+      </div>
     </div>
 
     <TeamBanner teamName={teamName} />
@@ -153,16 +217,6 @@ const PlayerEditor = ({ slot, player, index, onPlayerChange, onPhotoUpload }) =>
         value={player.name}
         onChange={(event) => onPlayerChange(slot.id, 'name', event.target.value)}
         placeholder="e.g. Alex Morgan"
-      />
-    </label>
-
-    <label className="field">
-      <span>Number</span>
-      <input
-        type="text"
-        value={player.number}
-        onChange={(event) => onPlayerChange(slot.id, 'number', event.target.value)}
-        placeholder="e.g. 10"
       />
     </label>
 
@@ -216,7 +270,7 @@ const ControlPanel = ({
 );
 
 const FieldHockeyLineup = () => {
-const [formationKey, setFormationKey] = useState('1-4-4-2');
+  const [formationKey, setFormationKey] = useState('1-4-4-2');
   const [teamName, setTeamName] = useState('Your Club Name');
   const [players, setPlayers] = useState(() => buildInitialPlayers());
 
@@ -249,7 +303,7 @@ const [formationKey, setFormationKey] = useState('1-4-4-2');
       return;
     }
   
-  const reader = new FileReader();
+    const reader = new FileReader();
     reader.onload = (loadEvent) => {
       const result = loadEvent.target?.result;
       handlePlayerChange(playerId, 'photo', typeof result === 'string' ? result : '');
@@ -283,8 +337,8 @@ const [formationKey, setFormationKey] = useState('1-4-4-2');
           onPhotoUpload={handlePhotoUpload}
         />
       </main>
-      </div>
-      );
+    </div>
+  );
 };
 
 export default FieldHockeyLineup;
