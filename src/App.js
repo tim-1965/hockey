@@ -1,42 +1,238 @@
-import React, { useState } from 'react';
-import { Upload, Users, Trophy } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import './App.css';
+
+const FORMATIONS = {
+  '1-4-4-2': [
+    { id: 'gk', position: 'GK', label: 'Goalkeeper', x: 7, y: 50 },
+    { id: 'lb', position: 'LB', label: 'Left Back', x: 22, y: 18 },
+    { id: 'lcb', position: 'LCB', label: 'Left Centre Back', x: 22, y: 38 },
+    { id: 'rcb', position: 'RCB', label: 'Right Centre Back', x: 22, y: 62 },
+    { id: 'rb', position: 'RB', label: 'Right Back', x: 22, y: 82 },
+    { id: 'ldm', position: 'LM', label: 'Left Midfield', x: 45, y: 26 },
+    { id: 'cdm', position: 'CM', label: 'Centre Midfield', x: 38, y: 50 },
+    { id: 'cam', position: 'AM', label: 'Attacking Midfield', x: 58, y: 50 },
+    { id: 'rdm', position: 'RM', label: 'Right Midfield', x: 45, y: 74 },
+    { id: 'lf', position: 'LF', label: 'Left Forward', x: 80, y: 34 },
+    { id: 'rf', position: 'RF', label: 'Right Forward', x: 80, y: 66 }
+  ],
+  '1-3-2-3-2': [
+    { id: 'gk', position: 'GK', label: 'Goalkeeper', x: 7, y: 50 },
+    { id: 'lb', position: 'LB', label: 'Left Back', x: 22, y: 24 },
+    { id: 'cb', position: 'CB', label: 'Centre Back', x: 22, y: 50 },
+    { id: 'rb', position: 'RB', label: 'Right Back', x: 22, y: 76 },
+    { id: 'ls', position: 'LS', label: 'Left Screen', x: 37, y: 36 },
+    { id: 'rs', position: 'RS', label: 'Right Screen', x: 37, y: 64 },
+    { id: 'lm', position: 'LM', label: 'Left Midfield', x: 58, y: 22 },
+    { id: 'cm', position: 'CM', label: 'Centre Midfield', x: 58, y: 50 },
+    { id: 'rm', position: 'RM', label: 'Right Midfield', x: 58, y: 78 },
+    { id: 'lf', position: 'LF', label: 'Left Forward', x: 82, y: 36 },
+    { id: 'rf', position: 'RF', label: 'Right Forward', x: 82, y: 64 }
+  ]
+};
+
+const createEmptyPlayer = () => ({
+  name: '',
+  number: '',
+  photo: ''
+});
+
+const buildInitialPlayers = () => {
+  const initial = {};
+  Object.values(FORMATIONS).forEach((lineup) => {
+    lineup.forEach((slot) => {
+      if (!initial[slot.id]) {
+        initial[slot.id] = createEmptyPlayer();
+      }
+    });
+  });
+  return initial;
+};
+
+const formatFormationLabel = (formationKey) => formationKey.split('-').join(' – ');
+
+const FormationSelector = ({ formationKey, onSelect }) => (
+  <div className="formation-selector" role="tablist" aria-label="Formation selector">
+    {Object.keys(FORMATIONS).map((key) => {
+      const isActive = formationKey === key;
+      return (
+        <button
+          key={key}
+          type="button"
+          role="tab"
+          aria-selected={isActive}
+          className={`formation-button${isActive ? ' active' : ''}`}
+          onClick={() => onSelect(key)}
+        >
+          {formatFormationLabel(key)}
+        </button>
+      );
+    })}
+  </div>
+);
+
+const PlayerMarker = ({ slot, player, index }) => (
+  <div className="player-marker" style={{ left: `${slot.x}%`, top: `${slot.y}%` }}>
+    <div className="player-card">
+      <div className="player-photo">
+        {player.photo ? (
+          <img src={player.photo} alt={player.name || slot.position} />
+        ) : (
+          <span>{player.number || slot.position}</span>
+        )}
+      </div>
+      <div className="player-number" aria-hidden="true">{player.number || index + 1}</div>
+      <div className="player-banner">
+        <span className="player-name">{player.name || `Player ${index + 1}`}</span>
+        <span className="player-role">{slot.label}</span>
+      </div>
+    </div>
+  </div>
+);
+
+const TeamBanner = ({ teamName }) => (
+  <div className="team-banner" aria-live="polite">
+    <div className="team-banner-emblem">🏑</div>
+    <div className="team-banner-text">
+      <span className="team-banner-title">Starting XI</span>
+      <span className="team-banner-name">{teamName}</span>
+    </div>
+  </div>
+);
+
+const Pitch = ({ teamName, formationPlayers }) => (
+  <section className="pitch-wrapper" aria-label="Lineup pitch preview">
+    <div className="stadium-backdrop" aria-hidden="true" />
+    <div className="stadium-floodlights" aria-hidden="true" />
+    <div className="stadium-crowd" aria-hidden="true" />
+
+    <div className="pitch" role="img" aria-label="Field hockey pitch with lineup">
+      <svg className="pitch-markings" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet">
+        <rect x="8" y="8" width="384" height="184" rx="12" ry="12" fill="none" stroke="white" strokeWidth="3" />
+        <line x1="200" y1="8" x2="200" y2="192" stroke="white" strokeWidth="2.4" />
+        <line x1="96" y1="8" x2="96" y2="192" stroke="white" strokeWidth="1.6" strokeDasharray="10 8" />
+        <line x1="304" y1="8" x2="304" y2="192" stroke="white" strokeWidth="1.6" strokeDasharray="10 8" />
+
+        <rect x="2" y="78" width="12" height="44" fill="rgba(255,255,255,0.15)" stroke="white" strokeWidth="3" />
+        <rect x="386" y="78" width="12" height="44" fill="rgba(255,255,255,0.15)" stroke="white" strokeWidth="3" />
+
+        <path d="M 20 78 A 44 44 0 0 1 20 122" fill="none" stroke="white" strokeWidth="2.4" />
+        <path d="M 380 78 A 44 44 0 0 0 380 122" fill="none" stroke="white" strokeWidth="2.4" />
+
+        <line x1="64" y1="78" x2="20" y2="78" stroke="white" strokeWidth="2" />
+        <line x1="64" y1="122" x2="20" y2="122" stroke="white" strokeWidth="2" />
+        <line x1="380" y1="78" x2="336" y2="78" stroke="white" strokeWidth="2" />
+        <line x1="380" y1="122" x2="336" y2="122" stroke="white" strokeWidth="2" />
+
+        <circle cx="40" cy="100" r="3.5" fill="white" />
+        <circle cx="360" cy="100" r="3.5" fill="white" />
+      </svg>
+
+      {formationPlayers.map(({ slot, player }, index) => (
+        <PlayerMarker key={slot.id} slot={slot} player={player} index={index} />
+      ))}
+    </div>
+
+    <TeamBanner teamName={teamName} />
+  </section>
+);
+
+const PlayerEditor = ({ slot, player, index, onPlayerChange, onPhotoUpload }) => (
+  <div className="player-editor">
+    <div className="player-editor-header">
+      <div className="player-index">{index + 1}</div>
+      <div>
+        <p className="player-position">{slot.label}</p>
+        <span className="player-short">{slot.position}</span>
+      </div>
+    </div>
+
+    <label className="field">
+      <span>Player name</span>
+      <input
+        type="text"
+        value={player.name}
+        onChange={(event) => onPlayerChange(slot.id, 'name', event.target.value)}
+        placeholder="e.g. Alex Morgan"
+      />
+    </label>
+
+    <label className="field">
+      <span>Number</span>
+      <input
+        type="text"
+        value={player.number}
+        onChange={(event) => onPlayerChange(slot.id, 'number', event.target.value)}
+        placeholder="e.g. 10"
+      />
+    </label>
+
+    <label className="field upload">
+      <span>Player photo</span>
+      <input type="file" accept="image/*" onChange={(event) => onPhotoUpload(slot.id, event)} />
+    </label>
+  </div>
+);
+
+const ControlPanel = ({
+  teamName,
+  onTeamNameChange,
+  formationKey,
+  formationPlayers,
+  onPlayerChange,
+  onPhotoUpload
+}) => (
+  <section className="control-panel" aria-label="Lineup controls">
+    <div className="panel-header">
+      <h2>Team Management</h2>
+      <p>
+        Update your squad details for the {formatFormationLabel(formationKey)} shape to refresh the broadcast graphic.
+      </p>
+    </div>
+
+    <div className="team-name-field">
+      <label htmlFor="team-name">Team name</label>
+      <input
+        id="team-name"
+        type="text"
+        value={teamName}
+        onChange={(event) => onTeamNameChange(event.target.value)}
+        placeholder="Enter your team name"
+      />
+    </div>
+
+    <div className="player-grid">
+      {formationPlayers.map(({ slot, player }, index) => (
+        <PlayerEditor
+          key={slot.id}
+          slot={slot}
+          player={player}
+          index={index}
+          onPlayerChange={onPlayerChange}
+          onPhotoUpload={onPhotoUpload}
+        />
+      ))}
+    </div>
+  </section>
+);
 
 const FieldHockeyLineup = () => {
-  const [formation, setFormation] = useState('1-4-4-2');
-  const [players, setPlayers] = useState({});
+const [formationKey, setFormationKey] = useState('1-4-4-2');
+  const [teamName, setTeamName] = useState('Your Club Name');
+  const [players, setPlayers] = useState(() => buildInitialPlayers());
 
-  // Formation positions (x, y coordinates as percentages) - Fixed for proper spacing
-  const formations = {
-    '1-4-4-2': [
-      { id: 'gk', position: 'GK', x: 5, y: 50, label: 'Goalkeeper' },
-      { id: 'lb', position: 'LB', x: 20, y: 15, label: 'Left Back' },
-      { id: 'lcb', position: 'LCB', x: 20, y: 35, label: 'Left Centre Back' },
-      { id: 'rcb', position: 'RCB', x: 20, y: 65, label: 'Right Centre Back' },
-      { id: 'rb', position: 'RB', x: 20, y: 85, label: 'Right Back' },
-      { id: 'ldm', position: 'LM', x: 45, y: 25, label: 'Left Mid' },
-      { id: 'cdm', position: 'CDM', x: 35, y: 50, label: 'Centre Mid' },
-      { id: 'cam', position: 'CAM', x: 55, y: 50, label: 'Attacking Mid' },
-      { id: 'rdm', position: 'RM', x: 45, y: 75, label: 'Right Mid' },
-      { id: 'lf', position: 'LF', x: 80, y: 30, label: 'Left Forward' },
-      { id: 'rf', position: 'RF', x: 80, y: 70, label: 'Right Forward' }
-    ],
-    '1-3-2-3-2': [
-      { id: 'gk', position: 'GK', x: 5, y: 50, label: 'Goalkeeper' },
-      { id: 'lb', position: 'LB', x: 20, y: 20, label: 'Left Back' },
-      { id: 'cb', position: 'CB', x: 20, y: 50, label: 'Centre Back' },
-      { id: 'rb', position: 'RB', x: 20, y: 80, label: 'Right Back' },
-      { id: 'ldm', position: 'LS', x: 35, y: 35, label: 'Left Screen' },
-      { id: 'rdm', position: 'RS', x: 35, y: 65, label: 'Right Screen' },
-      { id: 'lm', position: 'LM', x: 55, y: 20, label: 'Left Mid' },
-      { id: 'cm', position: 'CM', x: 55, y: 50, label: 'Centre Mid' },
-      { id: 'rm', position: 'RM', x: 55, y: 80, label: 'Right Mid' },
-      { id: 'lf', position: 'LF', x: 80, y: 35, label: 'Left Forward' },
-      { id: 'rf', position: 'RF', x: 80, y: 65, label: 'Right Forward' }
-    ]
-  };
+  const currentFormation = FORMATIONS[formationKey];
+
+  const formationPlayers = useMemo(
+    () =>
+      currentFormation.map((slot) => ({
+        slot,
+        player: players[slot.id] ?? createEmptyPlayer()
+      })),
+    [currentFormation, players]
+  );
 
   const handlePlayerChange = (playerId, field, value) => {
-    setPlayers(prev => ({
+    setPlayers((prev) => ({
       ...prev,
       [playerId]: {
         ...prev[playerId],
@@ -46,206 +242,49 @@ const FieldHockeyLineup = () => {
   };
 
   const handlePhotoUpload = (playerId, event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        handlePlayerChange(playerId, 'photo', e.target.result);
-      };
-      reader.readAsDataURL(file);
+    const input = event.target;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
     }
+  
+  const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      const result = loadEvent.target?.result;
+      handlePlayerChange(playerId, 'photo', typeof result === 'string' ? result : '');
+    };
+    reader.onloadend = () => {
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
   };
 
-  const currentFormation = formations[formation];
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-900 via-green-800 to-green-900 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-white mb-4 flex items-center justify-center gap-3">
-            <Trophy className="text-yellow-400" size={40} />
-            Field Hockey Lineup Tool
-            <Trophy className="text-yellow-400" size={40} />
-          </h1>
-          
-          {/* Formation Selector */}
-          <div className="flex justify-center gap-4 mb-6">
-            <button
-              onClick={() => setFormation('1-4-4-2')}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                formation === '1-4-4-2' 
-                  ? 'bg-white text-green-800 shadow-lg' 
-                  : 'bg-green-700 text-white hover:bg-green-600'
-              }`}
-            >
-              1-4-4-2 Formation
-            </button>
-            <button
-              onClick={() => setFormation('1-3-2-3-2')}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                formation === '1-3-2-3-2' 
-                  ? 'bg-white text-green-800 shadow-lg' 
-                  : 'bg-green-700 text-white hover:bg-green-600'
-              }`}
-            >
-              1-3-2-3-2 Formation
-            </button>
-          </div>
-        </div>
+    <div className="app">
+      <header className="hero">
+        <div className="hero-badge">Broadcast Ready</div>
+        <h1 className="hero-title">Field Hockey Lineup Builder</h1>
+        <p className="hero-subtitle">
+          Craft a line-up reveal that mirrors the electric atmosphere of the pre-match presentation.
+        </p>
 
-        {/* FIELD HOCKEY PITCH - Proper horizontal layout */}
-        <div className="mb-8">
-          <div className="relative bg-green-600 rounded-2xl shadow-2xl p-6 border-4 border-white">
-            {/* Stadium atmosphere */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 via-red-600 to-yellow-600 opacity-20 rounded-3xl blur-sm"></div>
-            
-            {/* Field Hockey Pitch - Horizontal orientation */}
-            <div className="relative w-full h-80 bg-green-500 rounded-lg border-4 border-white shadow-inner overflow-hidden">
-              {/* Pitch markings - Corrected for field hockey */}
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet">
-                {/* Field boundary */}
-                <rect x="10" y="10" width="380" height="180" fill="none" stroke="white" strokeWidth="2"/>
-                
-                {/* Center line */}
-                <line x1="200" y1="10" x2="200" y2="190" stroke="white" strokeWidth="2"/>
-                
-                {/* Goals */}
-                <rect x="5" y="80" width="10" height="40" fill="none" stroke="white" strokeWidth="3"/>
-                <rect x="385" y="80" width="10" height="40" fill="none" stroke="white" strokeWidth="3"/>
-                
-                {/* Shooting circles (D-areas) - Proper field hockey semicircles */}
-                <path d="M 10 80 A 40 40 0 0 1 10 120" fill="none" stroke="white" strokeWidth="2"/>
-                <path d="M 390 80 A 40 40 0 0 0 390 120" fill="none" stroke="white" strokeWidth="2"/>
-                
-                {/* Shooting circle lines */}
-                <line x1="50" y1="80" x2="10" y2="80" stroke="white" strokeWidth="2"/>
-                <line x1="50" y1="120" x2="10" y2="120" stroke="white" strokeWidth="2"/>
-                <line x1="350" y1="80" x2="390" y2="80" stroke="white" strokeWidth="2"/>
-                <line x1="350" y1="120" x2="390" y2="120" stroke="white" strokeWidth="2"/>
-                
-                {/* Penalty spots */}
-                <circle cx="25" cy="100" r="2" fill="white"/>
-                <circle cx="375" cy="100" r="2" fill="white"/>
-                
-                {/* 25-yard lines */}
-                <line x1="100" y1="10" x2="100" y2="190" stroke="white" strokeWidth="1" strokeDasharray="5,5"/>
-                <line x1="300" y1="10" x2="300" y2="190" stroke="white" strokeWidth="1" strokeDasharray="5,5"/>
-              </svg>
+        <FormationSelector formationKey={formationKey} onSelect={setFormationKey} />
+      </header>
 
-              {/* Player positions - Fixed positioning to prevent overlap */}
-              {currentFormation.map((pos, index) => {
-                const player = players[pos.id] || {};
-                return (
-                  <div
-                    key={pos.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                    style={{
-                      left: `${pos.x}%`,
-                      top: `${pos.y}%`,
-                    }}
-                  >
-                    {/* Player display - broadcast style */}
-                    <div className="relative group">
-                      {/* Player photo circle */}
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full shadow-lg border-2 border-white flex items-center justify-center overflow-hidden hover:scale-110 transition-all duration-300 cursor-pointer">
-                        {player.photo ? (
-                          <img 
-                            src={player.photo} 
-                            alt={player.name || pos.position}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-white font-bold text-xs">
-                            {pos.position}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Player number */}
-                      <div className="absolute -top-1 -left-1 w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center border border-blue-600">
-                        <span className="text-blue-800 font-bold text-xs">{index + 1}</span>
-                      </div>
-                      
-                      {/* Player name banner */}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1">
-                        <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-2 py-1 rounded shadow-lg min-w-max">
-                          <div className="text-center">
-                            <div className="text-xs font-bold uppercase">
-                              {player.name || `PLAYER ${index + 1}`}
-                            </div>
-                            <div className="text-xs opacity-75">{pos.position}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* Team name banner */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-800 to-blue-900 text-white px-8 py-3 rounded-lg shadow-2xl border border-white">
-              <h2 className="text-xl font-bold uppercase tracking-wide">YOUR TEAM NAME</h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Player Management Panel */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6">
-          <h2 className="text-2xl font-bold text-green-800 mb-6 flex items-center gap-2">
-            <Users size={28} />
-            Team Management - {formation} Formation
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {currentFormation.map((pos, index) => {
-              const player = players[pos.id] || {};
-              return (
-                <div key={pos.id} className="bg-green-50 rounded-lg p-4 border-2 border-green-200 hover:border-green-400 transition-colors">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-green-800">{pos.label}</h3>
-                      <p className="text-sm text-green-600">{pos.position}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      placeholder="Player name"
-                      value={player.name || ''}
-                      onChange={(e) => handlePlayerChange(pos.id, 'name', e.target.value)}
-                      className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                    
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-green-700 hover:text-green-800 transition-colors">
-                      <Upload size={14} />
-                      Upload Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload(pos.id, e)}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-6 text-white opacity-80">
-          <p className="text-lg">🏑 Ready for tomorrow's match! 🏑</p>
-        </div>
+      <main className="stadium" aria-label="Lineup preview and controls">
+        <Pitch teamName={teamName} formationPlayers={formationPlayers} />
+        <ControlPanel
+          teamName={teamName}
+          onTeamNameChange={setTeamName}
+          formationKey={formationKey}
+          formationPlayers={formationPlayers}
+          onPlayerChange={handlePlayerChange}
+          onPhotoUpload={handlePhotoUpload}
+        />
+      </main>
       </div>
-    </div>
-  );
+      );
 };
 
 export default FieldHockeyLineup;
